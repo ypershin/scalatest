@@ -108,10 +108,13 @@ object MainScala {
 
     val fileOut = new FileWriter("/data/fileOut.csv")
     
-    val lstB2 = lstBuff.groupBy(_._1)
+//    val lstB2 = lstBuff groupBy (p => (p._1,p._2,p._3)) map {
+//      case(k, v) =>
+//        (k._1, k._2, k._3, (v map (_.4_) sum), (v map (_._5) sum))
+//    }
     
-    fileOut.write(lstB2.mkString("\n"))
-    fileOut.close()
+//    fileOut.write(lstB2.mkString("\n"))
+//    fileOut.close()
 
     println("msec: " + (endTime - startTime))
     // println(sb.toString)

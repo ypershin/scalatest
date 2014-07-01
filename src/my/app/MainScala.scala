@@ -1,66 +1,131 @@
 package my.app
 
 import scala.io._
+import scala.collection.mutable.Map
 
 object MainScala {
 
-  val volume = List((1000, 100, 1.0), (1000, 200, 1.1), (2000, 100, 1.5), (2000, 100, 1.6))
-  val price = List((100, 10), (200, 15))
+  // map hourly prices
+  def loadPrice() {
+    var priceMap = collection.mutable.Map[String, Double]()
+    val startTime = System.currentTimeMillis()
+    val fileName = "/data/fwd_price.tsv"
+    var cnt = 0L
 
-  val lst = List(1, 2, 3)
-
-  def tst = {
-    // to pivot list 
-    for (l <- volume) println(l._1)
-  }
-
-  def ps = {
-    var sb = new StringBuffer()
-    for (v <- volume) {
-      for (p <- price) {
-        if (v._2 == p._1) {
-          sb.append(v._1 + "\t" + v._2 + "\t" + v._3 * p._2)
-        }
-      }
-      sb.append("\n")
-    }
-    sb.toString()
-  }
-
-  def readInput {
-    // val fileName = "/data/fwd_price_hr.tsv"
-    val fileName = "/data/stg_site_volume_hr.tsv"
-    var cnt: Long = 0L
     for (line <- Source.fromFile(fileName).getLines) {
-      if (line.indexOf("0702") > -1) {
-        println(line)
-        val arr = line.split("\t").reverse
-        var b = new Array[String](arr.size-2) 
-        arr.copyToArray(b)
-        val ad = b.reverse.map(_.toDouble)
-        println(ad.map(_+100.0).mkString(" "))
-        cnt += 1
-      }
-      if (cnt > 2) return
+      val arr: Array[String] = line.split("\t")
+      priceMap.put(arr(0).substring(0, 11) + arr(1), arr(3).toDouble)
+
+      //      if (cnt==5) {
+      //        println(md.toString)
+      //      }      
+      //      
+      cnt += 1
     }
-  }
-  
-  
-  def testString {
-    val str = "12 13"
-    val lst = str.split(" ")
-    println(lst.map(_*2))
-   
-      
+    println("recs:" + cnt)
+    val endTime = System.currentTimeMillis()
+    println("msec: " + (endTime - startTime))
   }
 
+  /************************************************************************/
+  
+  var priceMapHr = collection.mutable.Map[String, List[Double]]()
+
+  def loadPriceHr() {
+    val startTime = System.currentTimeMillis()
+    val fileName = "/data/fwd_price_hr.tsv"
+
+    var cnt = 0L
+    for (line <- Source.fromFile(fileName).getLines) {
+      val arr = line.split("\t")
+      priceMapHr.put(arr(0).substring(0, 4) + ":" + arr(2).trim + ":" + arr(1).trim,
+        (for (a <- arr.drop(3)) yield a.toDouble).toList)
+
+      //      if (cnt == 2) {
+      //        println(priceMapHr)
+      //      }
+      //      cnt += 1
+    }
+    val endTime = System.currentTimeMillis()
+    println("msec: " + (endTime - startTime))
+    // for (k <- priceMapHr.keys) if(k.startsWith("2014:07")) println(k)
+  }
+
+  /************************************************************************/
+
+  import scala.collection.mutable.ListBuffer
+  
+  val sb = new StringBuffer()
+  val lstBuff = new ListBuffer[(String,String,String,Double,Double)]
+  
+  type tp = (String, Double) 
+  
+  
+  def cf(tup: (String, String, List[Double]), year: Int, onOff: String): Unit = {
+
+    val prc = priceMapHr.get(year + ":" + tup._2 + ":" + onOff) match {
+      case Some(lst) => lst
+      case None => { if(year==2014 && tup._2.startsWith("07")) println(year + ":" + tup._2 + ":" + onOff) };  List()
+    }
+    
+
+    if (prc != List()) {
+      
+      val tmp = (tup._1, year + "/" + tup._2.substring(0,2) + "/01", onOff, prc.last,           
+        (for ((x, y) <- tup._3 zip prc) yield x * y).sum)
+        
+      lstBuff += tmp
+      
+//      sb.append(tup._1 + "\t" + year + "/" + tup._2.substring(0,2) + "/01" + "\t" + 
+//          onOff + "\t" + prc.last + "\t" +          
+//        (for ((x, y) <- tup._3 zip prc) yield x * y).sum + "\n")
+    }
+    
+  }
+
+  /************************************************************************/
+  
+  import java.io.FileWriter
+
+  def calcCF: Unit = {
+    val startTime = System.currentTimeMillis()
+    val fileName = "/data/site_vol.tsv"
+    var cnt = 0L
+
+    val years = List(2014, 2015, 2016, 2017, 2018, 2019, 2020)
+    val onOff = List("ON", "OFF")
+
+    for (line <- Source.fromFile(fileName).getLines) {
+      val arr = line.split("\t").toList
+
+      val tup = (arr(0), arr(1), (for (v <- arr.drop(2)) yield v.toDouble).toList)
+
+      for (year <- years)
+        for (nf <- onOff)
+          cf(tup, year, nf)
+    }
+    val endTime = System.currentTimeMillis()
+
+    val fileOut = new FileWriter("/data/fileOut.csv")
+    
+    val lstB2 = lstBuff.groupBy(_._1)
+    
+    fileOut.write(lstB2.mkString("\n"))
+    fileOut.close()
+
+    println("msec: " + (endTime - startTime))
+    // println(sb.toString)
+
+  }
+
+  /************************************************************************/
+  
   def main(args: Array[String]) {
-    // println(volume)
-    // println(ps)
-    // tst    
-    // tst
-    readInput
-    // println(new Test().tstN(10).mkString(","))
+
+    // loadPrice
+    loadPriceHr
+    calcCF
+
   }
 
 }

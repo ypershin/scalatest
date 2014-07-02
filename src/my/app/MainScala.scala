@@ -28,7 +28,7 @@ object MainScala {
   }
 
   /************************************************************************/
-  
+
   var priceMapHr = collection.mutable.Map[String, List[Double]]()
 
   def loadPriceHr() {
@@ -54,37 +54,35 @@ object MainScala {
   /************************************************************************/
 
   import scala.collection.mutable.ListBuffer
-  
+
   val sb = new StringBuffer()
-  val lstBuff = new ListBuffer[(String,String,String,Double,Double)]
-  
-  type tp = (String, Double) 
-  
-  
+  val lstBuff = new ListBuffer[(String, String, String, Double, Double)]
+
+  type tp = (String, Double)
+
   def cf(tup: (String, String, List[Double]), year: Int, onOff: String): Unit = {
 
     val prc = priceMapHr.get(year + ":" + tup._2 + ":" + onOff) match {
       case Some(lst) => lst
-      case None => { if(year==2014 && tup._2.startsWith("07")) println(year + ":" + tup._2 + ":" + onOff) };  List()
+      case None => { if (year == 2014 && tup._2.startsWith("07")) println(year + ":" + tup._2 + ":" + onOff) }; List()
     }
-    
 
     if (prc != List()) {
-      
-      val tmp = (tup._1, year + "/" + tup._2.substring(0,2) + "/01", onOff, prc.last,           
+
+      val tmp = (tup._1, year + "/" + tup._2.substring(0, 2) + "/01", onOff, prc.last,
         (for ((x, y) <- tup._3 zip prc) yield x * y).sum)
-        
+
       lstBuff += tmp
-      
-//      sb.append(tup._1 + "\t" + year + "/" + tup._2.substring(0,2) + "/01" + "\t" + 
-//          onOff + "\t" + prc.last + "\t" +          
-//        (for ((x, y) <- tup._3 zip prc) yield x * y).sum + "\n")
+
+      //      sb.append(tup._1 + "\t" + year + "/" + tup._2.substring(0,2) + "/01" + "\t" + 
+      //          onOff + "\t" + prc.last + "\t" +          
+      //        (for ((x, y) <- tup._3 zip prc) yield x * y).sum + "\n")
     }
-    
+
   }
 
   /************************************************************************/
-  
+
   import java.io.FileWriter
 
   def calcCF: Unit = {
@@ -106,15 +104,19 @@ object MainScala {
     }
     val endTime = System.currentTimeMillis()
 
-    val fileOut = new FileWriter("/data/fileOut.csv")
+    val fileOut = new FileWriter("/data/fileOut.tsv")
+
+    val lsG = lstBuff.toList groupBy (p => (p._1, p._2, p._3)) map {
+      case (k, v) =>
+        (k._1, k._2, k._3, (v map (_._4) sum), (v map (_._5) sum))
+    }
+
+    // fileOut.write(lsG.mkString("\n"))    
     
-//    val lstB2 = lstBuff groupBy (p => (p._1,p._2,p._3)) map {
-//      case(k, v) =>
-//        (k._1, k._2, k._3, (v map (_.4_) sum), (v map (_._5) sum))
-//    }
     
-//    fileOut.write(lstB2.mkString("\n"))
-//    fileOut.close()
+    for (l <- lsG) fileOut.write(l._1 + "\t" + l._2 + "\t" + l._3 + "\t" + l._4 + "\t" + l._5 + "\n")
+    
+    fileOut.close()
 
     println("msec: " + (endTime - startTime))
     // println(sb.toString)
@@ -122,7 +124,7 @@ object MainScala {
   }
 
   /************************************************************************/
-  
+
   def main(args: Array[String]) {
 
     // loadPrice

@@ -4,7 +4,7 @@ import scala.io._
 import scala.collection.mutable.Map
 
 object MainScala {
-
+  
   // map hourly prices
   def loadPrice() {
     var priceMap = collection.mutable.Map[String, Double]()
@@ -48,7 +48,7 @@ object MainScala {
       //      cnt += 1
     }
     val endTime = System.currentTimeMillis()
-    println("msec: " + (endTime - startTime))
+    println("sec: " + (endTime - startTime)/1000.0)
     // for (k <- priceMapHr.keys) if(k.startsWith("2014:07")) println(k)
   }
 
@@ -65,7 +65,7 @@ object MainScala {
 
     val prc = priceMapHr.get(year + ":" + tup._2 + ":" + onOff) match {
       case Some(lst) => lst
-      case None => { if (year == 2014 && tup._2.startsWith("07")) println(year + ":" + tup._2 + ":" + onOff) }; List()
+      case None => List() // { if (year == 2014 && tup._2.startsWith("07")) println(year + ":" + tup._2 + ":" + onOff) }; 
     }
 
     if (prc != List()) {
@@ -86,7 +86,7 @@ object MainScala {
   def calcCF: Unit = {
     val startTime = System.currentTimeMillis()
     // val fileName = "/data/site_vol.tsv"
-    val fileName = "C:/tmp/site_vol.tsv"
+    val fileName = "C:/tmp/stg_site_volume_hr_700K.tsv"
     var cnt = 0L
 
     val years = List(2014, 2015, 2016, 2017, 2018, 2019, 2020)
@@ -101,23 +101,28 @@ object MainScala {
         for (nf <- onOff)
           cf(tup, year, nf)
     }
-    val endTime = System.currentTimeMillis()
 
     // val fileOut = new FileWriter("/data/fileOut.tsv")
-    val fileOut = new FileWriter("C:/tmp/fileOut.tsv")
+    val fileOut = new FileWriter("C:/tmp/fileOut_full.tsv")
+    
+    println("before group: " + (System.currentTimeMillis() - startTime)/1000.0)
 
-    val lsG = lstBuff.toList groupBy (p => (p._1, p._2, p._3)) map {
+    val lsG = lstBuff.toList.groupBy (p => (p._1, p._2, p._3)) map {
       case (k, v) =>
         (k._1, k._2, k._3, (v map (_._4) sum), (v map (_._5) sum))
     }
 
+    println("after group: " + (System.currentTimeMillis() - startTime)/1000.0)
+    
+    
     // fileOut.write(lsG.mkString("\n"))    
 
-    for (l <- lsG) fileOut.write(l._1 + "\t" + l._2 + "\t" + l._3 + "\t" + l._4 + "\t" + l._5 + "\n")
+    for (l <- lsG) fileOut.write(l._1 + "\t" + l._2 + "\t" + l._3 + "\t" + Math.round(l._4*1000)/1000.0 + "\t" + Math.round(l._5*1000)/1000.0 + "\n")
 
     fileOut.close()
 
-    println("msec: " + (endTime - startTime))
+    val endTime = System.currentTimeMillis()
+    println("total: " + (endTime - startTime) / 1000.0 + "\t(" + (endTime - startTime) / 60000.0 + " min)")
     // println(sb.toString)
 
   }
